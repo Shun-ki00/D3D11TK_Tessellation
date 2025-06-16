@@ -21,9 +21,17 @@
 
 ---
 
-## 使用ライブラリ
+## デモ実行ファイル
+最新版の実行ファイルはこちらからダウンロードできます： [Download D3D11TK_Tessellation v1.0.0](https://github.com/Shun-ki00/D3D11TK_Tessellation/releases/latest)
 
-| ライブラリ名       | 用途                             |
-|--------------------|----------------------------------|
-| **DirectX 11**     | グラフィックスAPI                |
-| **DirectXTK**     | リソースのロード、数学系など             |
+
+## 動作環境
+・OS：Windows 10 / 11  
+・GPU : Direct3D 11対応グラフィックカード  
+・開発環境：Visual Studio 2022  
+・ビルド対象：x64  
+
+## 使用ライブラリ
+・Direct3D 11  
+・DirectXTK  
+・Windows SDK   
