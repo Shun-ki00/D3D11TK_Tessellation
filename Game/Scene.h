@@ -41,17 +41,8 @@ public:
 	void Finalize();
 
 private:
-
 	// シェーダー、バッファの作成
 	void CreateShaderAndBuffer();
-	// ブレンドステートの作成
-	void CreateBlendState();
-	// 深度ステンシルステートの作成
-	void CreateDepthStencilState();
-	// ラスタライザーステートの作成
-	void CreateRasterizerState();
-
-
 
 private:
 
@@ -65,6 +56,8 @@ private:
 	ID3D11Device1* m_device;
 	// コンテキスト
 	ID3D11DeviceContext1* m_context;
+	// コモンステート
+	DirectX::CommonStates* m_commonStates;
 	
 
 	// 頂点シェーダー
@@ -86,14 +79,11 @@ private:
 	// 頂点バッファ用のバッファオブジェクト
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertexBuffer;
 
-	
-	// ブレンドステート
-	Microsoft::WRL::ComPtr<ID3D11BlendState> m_blendState;
-	// 深度ステンシルステート
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_depthStencilState;
-	// ラスタライザーステート
-	Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rasterizerState;
 
 	// テクスチャ
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_texture;
+
+	float m_index;
+
+	float m_offset;
 };

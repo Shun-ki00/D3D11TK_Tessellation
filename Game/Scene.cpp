@@ -25,6 +25,7 @@ Scene::Scene()
 	m_commonResources = CommonResources::GetInstance();
 	m_device          = CommonResources::GetInstance()->GetDeviceResources()->GetD3DDevice();
 	m_context         = CommonResources::GetInstance()->GetDeviceResources()->GetD3DDeviceContext();
+	m_commonStates    = CommonResources::GetInstance()->GetCommonStates();
 }
 
 /// <summary>
@@ -36,14 +37,15 @@ void Scene::Initialize()
 	m_camera = std::make_unique<DebugCamera>();
 	m_camera->Initialize(1280, 720);
 
+	m_index = 5.0f;
+	m_offset = 0.0f;
+
+	// ベーステクスチャ
+	DirectX::CreateWICTextureFromFile(
+		m_device, L"Resources/Texture/PlayerIcon.png", nullptr, m_texture.ReleaseAndGetAddressOf());
+
 	// シェーダー、バッファの作成
 	this->CreateShaderAndBuffer();
-	// ブレンドステートの作成
-	this->CreateBlendState();
-	// 深度ステンシルステートの作成
-	this->CreateDepthStencilState();
-	// ラスタライザーステートの作成
-	this->CreateRasterizerState();
 }
 
 /// <summary>
@@ -58,12 +60,27 @@ void Scene::Update(const float& elapsedTime)
 	auto io = ImGui::GetIO();
 	if (!io.WantCaptureMouse)
 	{
-		
+		m_camera->Update();
+		m_commonResources->SetViewMatrix(m_camera->GetViewMatrix());
 	}
 
-	m_camera->Update();
-	m_commonResources->SetViewMatrix(m_camera->GetViewMatrix());
+	if (InputManager::GetInstance()->OnKeyDown(DirectX::Keyboard::Up))
+	{
+		m_index++;
+	}
+	else if (InputManager::GetInstance()->OnKeyDown(DirectX::Keyboard::Down))
+	{
+		m_index--;
+	}
 
+	if (InputManager::GetInstance()->OnKey(DirectX::Keyboard::Right))
+	{
+		m_offset += 0.5f * elapsedTime;
+	}
+	else if (InputManager::GetInstance()->OnKey(DirectX::Keyboard::Left))
+	{
+		m_offset -= 0.5f * elapsedTime;
+	}
 }
 
 /// <summary>
@@ -72,7 +89,8 @@ void Scene::Update(const float& elapsedTime)
 void Scene::Render()
 {
 
-	DirectX::SimpleMath::Matrix world = DirectX::SimpleMath::Matrix::CreateScale(2.0f);
+	DirectX::SimpleMath::Matrix world = DirectX::SimpleMath::Matrix::CreateScale(1.0f) *
+		DirectX::SimpleMath::Matrix::CreateFromAxisAngle(DirectX::SimpleMath::Vector3::UnitY , DirectX::XMConvertToRadians(180.0f));
 
 	//	シェーダーに渡す追加のバッファを作成する。(ConstBuffer）
 	ConstBuffer cbuff;
@@ -80,7 +98,7 @@ void Scene::Render()
 	cbuff.matProj = m_commonResources->GetProjectionMatrix().Transpose();
 	cbuff.matWorld = world.Transpose();
 	cbuff.Diffuse = DirectX::SimpleMath::Vector4(1, 1, 1, 1);
-	cbuff.TessellationFactor = DirectX::SimpleMath::Vector4(5.0f, 0.0f, 0.0f, 0.0f);
+	cbuff.TessellationFactor = DirectX::SimpleMath::Vector4(m_index, m_offset, 0.0f, 0.0f);
 
 	//	受け渡し用バッファの内容更新(ConstBufferからID3D11Bufferへの変換）
 	m_context->UpdateSubresource(m_constantBuffer.Get(), 0, NULL, &cbuff, 0, 0);
@@ -105,7 +123,7 @@ void Scene::Render()
 	m_context->PSSetSamplers(0, 1, sampler);
 
 	// ブレンドステートを設定 (半透明描画用)
-	m_context->OMSetBlendState(m_blendState.Get(), nullptr, 0xFFFFFFFF);
+	m_context->OMSetBlendState(m_commonStates->AlphaBlend(), nullptr, 0xFFFFFFFF);
 	// 深度ステンシルステートを設定 (深度バッファの書き込みと参照)
 	//context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
 
@@ -119,7 +137,7 @@ void Scene::Render()
 	m_context->OMSetDepthStencilState(m_commonResources->GetCommonStates()->DepthDefault(), 0);
 
 	// ラスタライザーステートの設定
-	m_context->RSSetState(m_rasterizerState.Get());
+	m_context->RSSetState(m_commonStates->CullNone());
 
 	//	シェーダをセットする
 	m_context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
@@ -129,7 +147,7 @@ void Scene::Render()
 	m_context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 
 	// ピクセルシェーダーにテクスチャリソースを設定
-	//m_context->PSSetShaderResources(0, 1, m_texture.GetAddressOf());
+	m_context->PSSetShaderResources(0, 1, m_texture.GetAddressOf());
 
 	// 描画コール
 	m_context->Draw(4, 0);
@@ -229,60 +247,4 @@ void Scene::CreateShaderAndBuffer()
 
 	// 頂点バッファの作成
 	m_device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_vertexBuffer);
-}
-
-
-/// <summary>
-/// ブレンドステートの作成
-/// </summary>
-void Scene::CreateBlendState()
-{
-	D3D11_BLEND_DESC blendDesc = {};
-	blendDesc.AlphaToCoverageEnable = FALSE;  // カバレッジをアルファに基づいて有効化する
-	blendDesc.IndependentBlendEnable = FALSE; // 複数のレンダーターゲットを独立して設定する
-
-	D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
-	rtBlendDesc.BlendEnable = TRUE;              // ブレンドを有効化
-	rtBlendDesc.SrcBlend = D3D11_BLEND_SRC_ALPHA;        // ソースのアルファ
-	rtBlendDesc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;    // 逆アルファ
-	rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;           // 加算ブレンド
-	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;              // アルファ値のソース
-	rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ZERO;             // アルファ値のデスティネーション
-	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;           // アルファ値の加算
-	rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL; // RGBA全てを有効
-
-	blendDesc.RenderTarget[0] = rtBlendDesc;
-
-	// ブレンドステートを作成
-	m_device->CreateBlendState(&blendDesc, &m_blendState);
-}
-
-/// <summary>
-/// 深度ステンシルステートの作成
-/// </summary>
-void Scene::CreateDepthStencilState()
-{
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
-	depthStencilDesc.DepthEnable = TRUE;                          // 深度テストを有効化
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL; // 深度バッファの書き込みを有効化
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;      // 深度テスト条件 (小さい場合のみ描画)
-	depthStencilDesc.StencilEnable = FALSE;                       // ステンシルテストを無効化
-
-	// 深度ステンシルステートを作成
-	m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
-}
-
-/// <summary>
-/// ラスタライザーステートの作成
-/// </summary>
-void Scene::CreateRasterizerState()
-{
-	D3D11_RASTERIZER_DESC rasterDesc = {};
-	rasterDesc.FillMode = D3D11_FILL_WIREFRAME;      // 塗りつぶし (または D3D11_FILL_WIREFRAME)D3D11_FILL_SOLID
-	rasterDesc.CullMode = D3D11_CULL_NONE; // カリングなし (または D3D11_CULL_FRONT / D3D11_CULL_BACK)
-	rasterDesc.FrontCounterClockwise = FALSE;    // 時計回りの頂点順序を表面として認識
-	rasterDesc.DepthClipEnable = TRUE;           // 深度クリッピングを有効化
-
-	// ラスタライザーステートの作成
-	m_device->CreateRasterizerState(&rasterDesc, &m_rasterizerState);
 }

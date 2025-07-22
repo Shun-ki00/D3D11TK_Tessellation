@@ -108,16 +108,6 @@ void Game::Initialize(HWND window, int width, int height)
     ID3D11DeviceContext* context = m_deviceResources->GetD3DDeviceContext();
     ImGui_ImplDX11_Init(device, context);
 
-   
-    // プロジェクション行列の作成
-    m_commonResources->SetProjectionMatrix(
-        DirectX::SimpleMath::Matrix::CreatePerspectiveFieldOfView(
-            DirectX::XMConvertToRadians(45.0f),
-            (float)width / (float)height,
-            0.1f,
-            100.0f
-        ));
-
     // ベーシックエフェクトを作成
     m_basicEffect = std::make_unique<DirectX::BasicEffect>(
         m_deviceResources->GetD3DDevice()
@@ -169,6 +159,8 @@ void Game::Tick()
 void Game::Update(DX::StepTimer const& timer)
 {
     (void)timer;
+
+    m_inputManager->Update();
 
     m_scene->Update((float)timer.GetElapsedSeconds());
 
@@ -357,7 +349,7 @@ void Game::CreateWindowSizeDependentResources()
         1000.0f
     );
     // 射影行列を設定する
-    // m_commonResources->SetProjectionMatrix(projection);
+    m_commonResources->SetProjectionMatrix(projection);
 }
 
 // デバイスロストが発生した時の処理を記述する
@@ -374,12 +366,4 @@ void Game::OnDeviceRestored()
     // ウィンドウサイズに依存したリソースを生成する
     CreateWindowSizeDependentResources();
 }
-// フルスクリーン対応
-void Game::SetFullscreenState(BOOL value)
-{
-    m_full_screen = value;
-    m_deviceResources->GetSwapChain()->SetFullscreenState(m_full_screen, nullptr);
-    if (value) m_deviceResources->CreateWindowSizeDependentResources();
-}
-
 #pragma endregion

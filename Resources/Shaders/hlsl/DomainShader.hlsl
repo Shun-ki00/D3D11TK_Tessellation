@@ -23,11 +23,6 @@ DS_OUTPUT main(
         patch[1].position * input.uvw.x * (1.0f - input.uvw.y) +
         patch[2].position * input.uvw.x * input.uvw.y +
         patch[3].position * (1.0f - input.uvw.x) * input.uvw.y;
-
-
-    //// ワールド空間 → クリップ空間に変換
-    //output.position = mul(float4(worldPosition, 1.0f), matView);
-    //output.position = mul(output.position, matProj);
     
     output.position = float4(worldPosition, 1.0f);
     
