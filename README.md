@@ -1,5 +1,5 @@
 # D3D11TK_Tessellation
-![スクリーンショット 2025-06-02 125011](https://github.com/user-attachments/assets/46274253-ac95-44f0-af68-b2b2b333b777)
+<img width="1277" height="721" alt="スクリーンショット 2025-07-22 103849" src="https://github.com/user-attachments/assets/4340312b-25ac-43da-9184-3ca8c7bc621a" />
 
 ## 概要
 
